@@ -6,6 +6,7 @@ import httplib2
 from oauth2client import client
 from oauth2client import file
 from oauth2client import tools
+import concurrent.futures
 import pandas as pd
 
 
@@ -136,5 +137,25 @@ class UnrollAggregate:
                             
                     else:
                         self.starting_dict[k].append(data.iloc[i:i+1].to_dict()[k][i])
+        return self.starting_dict
+    
+    def process_row(self,i):
+        rows_to_produce = self.data.iloc[i:i+1].to_dict()[self.reference_column][i]
+        targets_to_produce = self.data.iloc[i:i+1].to_dict()[self.target_column][i]
+        for j in range(rows_to_produce):
+            target_value = 1 if j < targets_to_produce else 0
+            for k in self.starting_dict.keys():
+                if k == self.target_column:
+                    if self.is_conversion==True:
+                        self.starting_dict[k].append(target_value)
+                    else:
+                        self.starting_dict[k].append(targets_to_produce/rows_to_produce)
+
+                else:
+                    self.starting_dict[k].append(data.iloc[i:i+1].to_dict()[k][i])
+    
+    def process_in_parallel(self):
+        with concurrent.futures.ProcessPoolExecutor() as executor:
+            executor.map(self.process_row,[i for i in range(len(self.data))])
         return self.starting_dict
             #target_to_product = data.iloc[i:i+1].to_dict(target_column)[i]
